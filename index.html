@@ -660,7 +660,7 @@ function cargar() {
     const d = JSON.parse(localStorage.getItem(CLAVE_LS));
     if (d) return { config: normCfg(d.config), movs: (d.movs || []).map(normMov), cola: d.cola || [], conn: d.conn || { url: "", clave: "" }, lastSync: d.lastSync || 0, err: "", calHash: d.calHash || "", calErr: d.calErr || "", calUlt: d.calUlt || 0 };
   } catch (e) {}
-  return { config: cfgBase(), movs: [], cola: [], conn: { url: "", clave: "" }, lastSync: 0, err: "" };
+  return { config: normCfg(cfgBase()), movs: [], cola: [], conn: { url: "", clave: "" }, lastSync: 0, err: "" };
 }
 let S = cargar();
 function guardarLocal() { try { localStorage.setItem(CLAVE_LS, JSON.stringify(S)); } catch (e) {} }
@@ -1302,7 +1302,7 @@ $("#iPrev").addEventListener("click", e => {
   impPend.movs.forEach(mov => { const m = Object.assign({ creado: ahora }, mov); aplicar({ a: "put", mov: m }); S.cola.push({ a: "put", mov: m }); });
   if (impPend.cargos.length || impPend.vtos.length) {
     impPend.cargos.forEach(c => { const f = S.config.fijos.find(x => x.id === c.t); if (f) { f.cargoFijo = c.monto; f.cargoDesde = c.desde; } });
-    impPend.vtos.forEach(v => { const f = S.config.fijos.find(x => x.id === v.t); if (!f) return; if (v.dia) f.vence = v.dia; else if (!f.vence) f.vence = +v.vence.slice(8); if (v.vence !== venceBase(f, v.m)) f.vencimientos[v.m] = v.vence; else delete f.vencimientos[v.m]; });
+    impPend.vtos.forEach(v => { const f = S.config.fijos.find(x => x.id === v.t); if (!f) return; if (v.dia) f.vence = v.dia; else if (!f.vence) f.vence = +v.vence.slice(8); f.vencimientos = f.vencimientos || {}; if (v.vence !== venceBase(f, v.m)) f.vencimientos[v.m] = v.vence; else delete f.vencimientos[v.m]; });
     S.cola = S.cola.filter(o => o.a !== "cfg"); S.cola.push({ a: "cfg", config: JSON.parse(JSON.stringify(S.config)) });
   }
   const n = impPend.movs.length; impPend = null;
@@ -1385,6 +1385,7 @@ function guardarEditor() {
     mov = { id: "f-" + ED.item + "-" + M, tipo: "fijo", item: ED.item, mes: M, fecha: hoyISO(), descripcion: f ? f.nombre : "", monto, pagado: $("#fPagado").checked };
     const fv = $("#fVence").value;
     if (f && fv !== venceDe(f, M)) {
+      f.vencimientos = f.vencimientos || {};
       if (fv && fv !== venceBase(f, M)) f.vencimientos[M] = fv; else delete f.vencimientos[M];
       if (fv && !f.vence) f.vence = +fv.slice(8);
       guardarConfig(true);
